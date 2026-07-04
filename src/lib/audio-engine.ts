@@ -142,6 +142,11 @@ export function useAudioEngine() {
       usePlaybackStore.getState().setStreamUrl(undefined);
       return;
     }
+    // Drop the previous track's src immediately. Otherwise a paused→playing
+    // transition committed together with the track change (playNow/goTo set
+    // playing: true) makes the [playing] effect below re-play the OLD src
+    // for the duration of the streamUrlFor() round-trip.
+    el.removeAttribute("src");
 
     const token = ++resolveTokenRef.current;
     usePlaybackStore.getState().setStatus("loading");
@@ -375,11 +380,18 @@ export function useAudioEngine() {
     radioFetchedForRef.current = seedVideoId;
     fetchRadio(seedVideoId)
       .then((tracks) => {
+        // Guard against a stale fetch: the user may have replaced the queue
+        // (playNow/setQueue) while the radio request was in flight. Only
+        // append if this seed is still the current, last-in-queue track.
+        const s = usePlaybackStore.getState();
+        const cur = s.index >= 0 ? s.queue[s.index]?.videoId : undefined;
+        if (cur !== seedVideoId || s.index < s.queue.length - 1) return;
         const rest = tracks.filter((t) => t.id !== seedVideoId);
-        if (rest.length) usePlaybackStore.getState().appendToQueue(rest);
+        if (rest.length) s.appendToQueue(rest);
       })
       .catch(() => {
-        /* non-fatal — user can still manually queue */
+        // Allow a retry on transient failure.
+        radioFetchedForRef.current = undefined;
       });
   }, [autoRadio, qIndex, qLen, seedVideoId]);
 

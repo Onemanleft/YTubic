@@ -75,8 +75,11 @@ export async function prefetchStream(videoId: string): Promise<void> {
   try {
     const base = await getStreamBaseUrl();
     // Fire-and-forget — server returns 200/202 immediately and caches
-    // bytes in the background.
-    await fetch(`${base}/prefetch/${encodeURIComponent(videoId)}`);
+    // bytes in the background. fetch() only rejects on network errors, so an
+    // HTTP 4xx/5xx (yt-dlp spawn/extractor failure) resolves normally — drop
+    // the warm mark on an error status so the id is retried later.
+    const res = await fetch(`${base}/prefetch/${encodeURIComponent(videoId)}`);
+    if (!res.ok) prefetched.delete(videoId);
   } catch {
     // If it fails we'll just fall through to on-demand fetch later.
     prefetched.delete(videoId);

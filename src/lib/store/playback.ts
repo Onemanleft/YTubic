@@ -125,9 +125,13 @@ const playbackStateCreator: StateCreator<PlaybackState> = (set, get) => ({
   playNow: (track, extras) => {
     const mapped = shelfItemToTrack(track);
     if (!mapped) return;
-    const queue = extras?.length
+    let queue = extras?.length
       ? [mapped, ...extras.filter((t) => t.videoId !== mapped.videoId)]
       : [mapped];
+    // Honour an active shuffle for the trailing tracks (current stays first).
+    if (get().shuffle && queue.length > 1) {
+      queue = [queue[0], ...fisherYates(queue.slice(1))];
+    }
     set({
       queue,
       index: 0,
@@ -143,13 +147,19 @@ const playbackStateCreator: StateCreator<PlaybackState> = (set, get) => ({
   setQueue: (tracks, startIndex = 0) => {
     if (tracks.length === 0) return;
     const i = Math.max(0, Math.min(startIndex, tracks.length - 1));
+    // Honour an active shuffle: keep the chosen track current and shuffle
+    // the upcoming portion, matching setShuffle's semantics.
+    let queue = tracks;
+    if (get().shuffle) {
+      queue = [...tracks.slice(0, i + 1), ...fisherYates(tracks.slice(i + 1))];
+    }
     set({
-      queue: tracks,
+      queue,
       index: i,
       status: "loading",
       streamUrl: undefined,
       position: 0,
-      duration: tracks[i].duration ?? 0,
+      duration: queue[i].duration ?? 0,
       playing: true,
       error: undefined,
     });
