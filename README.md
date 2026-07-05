@@ -3,6 +3,7 @@
 # YTubic
 
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+[![Ko-fi](https://img.shields.io/badge/Ko--fi-Support%20the%20project-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/nuberr)
 
 A fast, responsive YouTube Music desktop client for Windows.
 
@@ -112,6 +113,14 @@ src/
 └── hooks/
 src-tauri/               # Rust backend (axum stream proxy, cookies, tray)
 ```
+
+## Support
+
+YTubic is free and always will be — no paid tiers, no locked features. If it's
+part of your daily soundtrack, you can
+[buy me a coffee on Ko-fi](https://ko-fi.com/nuberr) ☕ It goes toward keeping
+the app alive: fixes when YouTube breaks things, new features, and someday a
+code-signing certificate so Windows stops warning people at install time.
 
 ## Credits
 

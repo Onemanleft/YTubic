@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { checkForUpdates } from "@/lib/updater";
 
 const REPO_URL = "https://github.com/NUber-dev/YTubic";
+const KOFI_URL = "https://ko-fi.com/nuberr";
 
 const CREDITS: { name: string; role: string; url: string }[] = [
   { name: "yt-dlp", role: "audio streaming", url: "https://github.com/yt-dlp/yt-dlp" },
@@ -59,7 +60,7 @@ export function AboutDialog({
         </DialogHeader>
 
         <p className="text-sm text-muted-foreground">
-          Native-feeling YouTube Music desktop client. Unofficial — not
+          Fast, responsive YouTube Music desktop client. Unofficial — not
           affiliated with, endorsed by, or sponsored by Google or YouTube.
           "YouTube" and "YouTube Music" are trademarks of Google LLC.
         </p>
@@ -97,6 +98,9 @@ export function AboutDialog({
         </p>
 
         <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={link(KOFI_URL)}>
+            ☕ Support
+          </Button>
           <Button variant="outline" onClick={link(REPO_URL)}>
             GitHub
           </Button>
