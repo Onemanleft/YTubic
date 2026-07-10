@@ -6,6 +6,7 @@ import { fetchRadio } from "@/lib/innertube/radio";
 import { prefetchStream, saveTrackMeta, streamUrlFor } from "@/lib/stream";
 import { usePlaybackStore, type QueueTrack } from "@/lib/store/playback";
 import { usePremiumStore } from "@/lib/store/premium";
+import { useSettingsStore } from "@/lib/store/settings";
 import { openPremiumGate } from "@/lib/store/premium-gate";
 import {
   resolveStreamId,
@@ -508,6 +509,42 @@ export function useAudioEngine() {
     const id = window.setInterval(push, 2000);
     return () => window.clearInterval(id);
   }, [track, playing, duration]);
+
+  // Discord Rich Presence mirrors the same metadata, but pushed only on
+  // track / play-state / duration change — never the 2s position refresh
+  // above. Discord rate-limits activity updates, and it derives its own
+  // progress bar from the start/end timestamps, so one push animates the bar
+  // for the whole song. The worker + (re)connect lifecycle live in
+  // src-tauri/src/discord.rs; the on/off toggle is mirrored separately by
+  // useDiscordPresenceSync, which also clears the activity when disabled.
+  const discordRp = useSettingsStore((s) => s.discordRichPresence);
+  useEffect(() => {
+    if (!discordRp) return; // disabled → useDiscordPresenceSync cleared it
+    const s = usePlaybackStore.getState();
+    const t = s.index >= 0 ? s.queue[s.index] : undefined;
+    if (!t) {
+      void invoke("discord_clear").catch(() => {});
+      return;
+    }
+    const dur = Number.isFinite(s.duration) ? s.duration : 0;
+    // Timestamps (hence the progress bar) only while actually playing: Discord
+    // can't freeze a bar, so paused shows none rather than a wrong one. Unix
+    // milliseconds, per Discord's Activity spec.
+    let startMs: number | null = null;
+    let endMs: number | null = null;
+    if (s.playing && dur > 0) {
+      startMs = Math.round(Date.now() - s.position * 1000);
+      endMs = Math.round(startMs + dur * 1000);
+    }
+    void invoke("discord_update", {
+      title: t.title,
+      artist: buildArtistLabel(t),
+      album: t.album ?? "",
+      imageUrl: pickThumbnail(t.thumbnails, 512) ?? "",
+      startMs,
+      endMs,
+    }).catch(() => {});
+  }, [track, playing, duration, discordRp]);
 }
 
 function buildArtistLabel(track: QueueTrack): string {

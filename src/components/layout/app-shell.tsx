@@ -27,7 +27,11 @@ import { pickHighResThumbnail } from "@/components/shared/thumbnail";
 import { usePlaybackStore, currentTrack } from "@/lib/store/playback";
 import { useLayoutStore } from "@/lib/store/layout";
 import { usePremiumStatusSync } from "@/lib/store/premium";
-import { useCloseBehaviorSync, useSettingsStore } from "@/lib/store/settings";
+import {
+  useCloseBehaviorSync,
+  useDiscordPresenceSync,
+  useSettingsStore,
+} from "@/lib/store/settings";
 import {
   useAccountMetaBackfill,
   useAccountsChangedListener,
@@ -87,6 +91,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   useAccountMetaBackfill();
   useGlobalShortcuts();
   useCloseBehaviorSync();
+  useDiscordPresenceSync();
   useCacheAutoClean();
   usePlaybackNotifications();
   const mode = useLayoutStore((s) => s.mode);
