@@ -126,7 +126,7 @@ export async function fetchPremiumStatus(): Promise<PremiumStatus> {
   const upsellSuffix =
     /\b(music\s*)?premium\b[\s\S]{0,40}\b(now|today)\b/i;
   for (const s of labels) {
-    if (upsell.test(s) || upsellSuffix.test(s)) return "free";
+    if (upsell.test(s) || upsellSuffix.test(s)) return "premium";
   }
 
   // Premium membership signals — "Manage your Music Premium membership"
