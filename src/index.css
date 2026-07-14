@@ -169,6 +169,13 @@
     height: calc(100svh - var(--titlebar-h)) !important;
   }
 
+  /* Width follows the pointer directly while resizing. The regular
+     transitions remain enabled for expand/collapse button actions. */
+  body.layout-resizing [data-slot="sidebar-gap"],
+  body.layout-resizing [data-slot="sidebar-container"] {
+    transition: none !important;
+  }
+
   /* Thin, subtle scrollbars (used in main content area and carousels). */
   .app-scroll {
     scrollbar-width: thin;

@@ -11,6 +11,10 @@ import { PlayerBarBottom } from "@/components/layout/player-bar-bottom";
 import { FloatingPlayerSync } from "@/components/layout/floating-player-sync";
 import { DragSnapOverlay } from "@/components/layout/drag-snap-overlay";
 import { EntityPageHeader } from "@/components/layout/entity-page-header";
+import {
+  PlayerResizeHandle,
+  SidebarResizeHandle,
+} from "@/components/layout/layout-resize-handle";
 import { useEntityHeaderStore } from "@/lib/store/entity-header";
 import { SettingsDialog } from "@/components/settings/settings-dialog";
 import { PremiumGateDialog } from "@/components/layout/premium-gate-dialog";
@@ -39,7 +43,6 @@ import {
   useAccountsChangedListener,
   useLoginSuccessListener,
 } from "@/lib/store/accounts";
-import { cn } from "@/lib/utils";
 
 function isEditableTarget(el: EventTarget | null): boolean {
   if (!(el instanceof HTMLElement)) return false;
@@ -99,6 +102,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   useLastfmScrobbler();
   const mode = useLayoutStore((s) => s.mode);
   const setMode = useLayoutStore((s) => s.setMode);
+  const sidebarWidth = useLayoutStore((s) => s.sidebarWidth);
+  const playerWidth = useLayoutStore((s) => s.playerWidth);
   const background = useSettingsStore((s) => s.background);
   // The player UI is hidden whenever there's no active track —
   // covers the "Nothing playing" empty state at first launch and
@@ -197,8 +202,9 @@ export function AppShell({ children }: { children: ReactNode }) {
       <SidebarProvider
         style={
           {
-            "--sidebar-width": "13rem",
+            "--sidebar-width": `${sidebarWidth}px`,
             "--sidebar-width-icon": "4rem",
+            "--player-width": `${playerWidth}px`,
           } as React.CSSProperties
         }
       >
@@ -210,16 +216,19 @@ export function AppShell({ children }: { children: ReactNode }) {
           <TopBar />
           <div className="relative flex min-h-0 flex-1">
             <AppSidebar />
+            <SidebarResizeHandle />
             {/* In `right` mode we reserve 23rem on the right for the
                 floating player card — but only when a track is
                 actually loaded; the empty state shouldn't carve out
                 dead space. `bottom` and `floating` follow the same
                 "hide when no track" rule. */}
             <div
-              className={cn(
-                "relative z-10 flex min-h-0 min-w-0 flex-1 flex-col",
-                mode === "right" && hasTrack && "pr-[23rem]",
-              )}
+              className="relative z-10 flex min-h-0 min-w-0 flex-1 flex-col"
+              style={
+                mode === "right" && hasTrack
+                  ? { paddingRight: "calc(var(--player-width) + 1rem)" }
+                  : undefined
+              }
             >
               {/* Route entity header (playlist / album / artist).
                   An absolute overlay outside the scroll flow. <main>
@@ -241,6 +250,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               {mode === "bottom" && hasTrack && <PlayerBarBottom />}
             </div>
             {mode === "right" && hasTrack && <PlayerBar />}
+            {mode === "right" && hasTrack && <PlayerResizeHandle />}
             {mode === "floating" && hasTrack && <FloatingPlayerSync />}
           </div>
           <DragSnapOverlay />
