@@ -52,7 +52,7 @@ export function WindowResizeHandles() {
         <div
           key={direction}
           aria-hidden="true"
-          className={`absolute z-50 ${className}`}
+          className={`absolute z-50 touch-none select-none ${className}`}
           onMouseDown={(event) => {
             if (event.button !== 0) return;
             event.preventDefault();

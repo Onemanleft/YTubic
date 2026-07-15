@@ -87,6 +87,10 @@ windows-sys = { version = "0.59", features = [
 aes-gcm = "0.10"
 keyring = "4.1.5"
 rand = "0.8"
+# Reach the underlying WebKitGTK WebView for Linux-only settings that wry
+# does not expose. Keep this pinned to the version already used by wry so
+# `PlatformWebview::inner()` returns the same type.
+webkit2gtk = "=2.0.2"
 
 [dev-dependencies]
 # ServiceExt::oneshot for the stream-server routing test.

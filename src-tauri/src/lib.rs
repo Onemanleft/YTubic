@@ -3247,6 +3247,19 @@ pub fn run() {
             if let Err(e) = build_tray(app.handle()) {
                 eprintln!("[tray] build failed: {e}");
             }
+
+            // WebKitGTK disables smooth (kinetic) scrolling by default, so
+            // wheel scrolling otherwise jumps in coarse steps on Linux.
+            #[cfg(target_os = "linux")]
+            if let Some(w) = app.get_webview_window("main") {
+                let _ = w.with_webview(|webview| {
+                    use webkit2gtk::{SettingsExt, WebViewExt};
+                    let wv = webview.inner();
+                    if let Some(settings) = WebViewExt::settings(&wv) {
+                        settings.set_enable_smooth_scrolling(true);
+                    }
+                });
+            }
             // Debug builds swap the taskbar/window icon to the orange
             // dev variant (see runtime_icon) so a dev instance is
             // instantly distinguishable from an installed release.

@@ -252,6 +252,10 @@
       black calc(100% - 56px),
       rgba(0, 0, 0, var(--fade-r)) 100%
     );
+    /* Keep the mask on its own compositor layer. WebKitGTK otherwise
+       re-rasterizes every masked shelf during vertical scrolling. */
+    transform: translateZ(0);
+    contain: paint;
   }
 
   /* Vertical sibling of `shelf-edge-fade` for the sidebar playlist
