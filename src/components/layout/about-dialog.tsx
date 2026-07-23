@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { checkForUpdates } from "@/lib/updater";
 import { IS_BETA_PLATFORM, IS_MAC } from "@/lib/platform";
 import { openWhatsNew } from "@/lib/store/whats-new";
+import { DiscordIcon, GithubIcon } from "@/components/shared/brand-icons";
 
 const REPO_URL = "https://github.com/NUber-dev/YTubic";
 const DISCORD_URL = "https://discord.gg/v7JGAWWWj";
@@ -131,14 +132,17 @@ export function AboutDialog({
           .
         </p>
 
-        <div className="flex justify-end gap-2">
+        <div className="flex gap-2">
           <Button variant="outline" onClick={link(DISCORD_URL)}>
+            <DiscordIcon />
             Discord
           </Button>
           <Button variant="outline" onClick={link(REPO_URL)}>
+            <GithubIcon />
             GitHub
           </Button>
           <Button
+            className="ms-auto"
             onClick={() => {
               void checkForUpdates({ silent: false });
             }}
