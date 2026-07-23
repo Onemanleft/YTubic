@@ -6,6 +6,8 @@ import {
   DialogContent,
   DialogDescription,
   DialogTitle,
+  frostedDialogOverlay,
+  frostedDialogPanel,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { useWhatsNewStore } from "@/lib/store/whats-new";
@@ -96,14 +98,15 @@ export function WhatsNewDialog() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      {/* Same frosted surface as the Settings dialog: lighter overlay
-          dim, mostly-opaque blurred panel with the dark fill a hair
-          above --background. --wn-bg mirrors the panel fill so the
-          version chips' punch-through outlines and the bottom fade
-          blend into it instead of the plain dialog background. */}
+      {/* --wn-bg mirrors the frosted panel's fill so the version
+          chips' punch-through outlines and the bottom fade blend into
+          it instead of the plain dialog background. */}
       <DialogContent
-        overlayClassName="bg-black/40"
-        className="flex h-[min(760px,85vh)] w-[640px] max-w-[calc(100vw-2rem)] flex-col gap-0 overflow-hidden border-black/10 bg-background/90 p-0 backdrop-blur-2xl sm:max-w-[640px] dark:border-white/15 dark:bg-[oklch(0.19_0_0)]/90 [--wn-bg:var(--background)] dark:[--wn-bg:oklch(0.19_0_0)]"
+        overlayClassName={frostedDialogOverlay}
+        className={cn(
+          "flex h-[min(760px,85vh)] w-[640px] max-w-[calc(100vw-2rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-[640px] [--wn-bg:var(--background)] dark:[--wn-bg:oklch(0.19_0_0)]",
+          frostedDialogPanel,
+        )}
       >
         <div className="shrink-0 border-b px-6 py-5">
           <DialogTitle className="text-xl font-bold leading-none tracking-tight">
