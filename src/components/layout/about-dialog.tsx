@@ -17,7 +17,7 @@ import { IS_BETA_PLATFORM, IS_MAC } from "@/lib/platform";
 import { openWhatsNew } from "@/lib/store/whats-new";
 
 const REPO_URL = "https://github.com/NUber-dev/YTubic";
-const KOFI_URL = "https://ko-fi.com/nuberr";
+const DISCORD_URL = "https://discord.gg/v7JGAWWWj";
 
 const CREDITS: { name: string; role: string; url: string }[] = [
   { name: "yt-dlp", role: "audio streaming", url: "https://github.com/yt-dlp/yt-dlp" },
@@ -132,8 +132,8 @@ export function AboutDialog({
         </p>
 
         <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={link(KOFI_URL)}>
-            ☕ Support
+          <Button variant="outline" onClick={link(DISCORD_URL)}>
+            Discord
           </Button>
           <Button variant="outline" onClick={link(REPO_URL)}>
             GitHub
