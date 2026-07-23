@@ -96,7 +96,15 @@ export function WhatsNewDialog() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="flex h-[min(760px,85vh)] w-[640px] max-w-[calc(100vw-2rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-[640px]">
+      {/* Same frosted surface as the Settings dialog: lighter overlay
+          dim, mostly-opaque blurred panel with the dark fill a hair
+          above --background. --wn-bg mirrors the panel fill so the
+          version chips' punch-through outlines and the bottom fade
+          blend into it instead of the plain dialog background. */}
+      <DialogContent
+        overlayClassName="bg-black/40"
+        className="flex h-[min(760px,85vh)] w-[640px] max-w-[calc(100vw-2rem)] flex-col gap-0 overflow-hidden border-black/10 bg-background/90 p-0 backdrop-blur-2xl sm:max-w-[640px] dark:border-white/15 dark:bg-[oklch(0.19_0_0)]/90 [--wn-bg:var(--background)] dark:[--wn-bg:oklch(0.19_0_0)]"
+      >
         <div className="shrink-0 border-b px-6 py-5">
           <DialogTitle className="text-xl font-bold leading-none tracking-tight">
             What's New
@@ -140,7 +148,7 @@ export function WhatsNewDialog() {
             </div>
           </div>
           {/* Bottom fade so the list dissolves instead of clipping. */}
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-b from-transparent to-background" />
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-b from-transparent to-(--wn-bg)" />
         </div>
       </DialogContent>
     </Dialog>
@@ -214,7 +222,7 @@ function TimelineEntry({
             : "border-border bg-secondary text-muted-foreground",
         )}
         style={{
-          outline: "6px solid var(--background)",
+          outline: "6px solid var(--wn-bg)",
           // Solid accent tint (mixed with the background, not alpha
           // over transparent) so the rail can't show through the chip.
           ...(isMajor
