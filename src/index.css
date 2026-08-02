@@ -223,6 +223,23 @@
   .app-scroll::-webkit-scrollbar-thumb:hover {
     background: var(--muted-foreground);
   }
+
+  /* The one main content scroller. `scrollbar-gutter: stable` keeps the
+     reserved track present whether or not the route overflows, so nothing
+     shifts sideways when a page starts or stops scrolling. The negative
+     margin then pulls the content box back out over that track, so the
+     left and right insets stay equal and the scrollbar floats inside the
+     route's own right-hand padding instead of adding to it. Only empty
+     padding sits under the track, so nothing is covered.
+
+     The reserved width is whatever the platform's scrollbar takes, so it
+     is measured at runtime — see EntityScroller in app-shell.tsx. */
+  main.app-scroll {
+    scrollbar-gutter: stable;
+  }
+  main.app-scroll > .app-scroll-content {
+    margin-right: calc(-1 * var(--scroller-gutter, 0px));
+  }
 }
 
 @layer utilities {
@@ -303,9 +320,32 @@
     display: none;
   }
 
-  /* Top/bottom fade for the lyrics column. Applied only once the
-     karaoke has progressed past the first line — before that we want
-     the first line crisp at the top of the column. */
+  /* Bottom-only fade. What the lyrics column wears while the first line
+     is still the active one: the top has to stay crisp there, but the
+     bottom edge is a hard cut through the middle of a glyph without it.
+     Same four stops as `.lyrics-mask` below, with the opening one opaque
+     instead of transparent, so swapping between the two only changes the
+     top of the column. */
+  .lyrics-mask-bottom {
+    mask-image: linear-gradient(
+      to bottom,
+      black 0%,
+      black 14%,
+      black 86%,
+      transparent 100%
+    );
+    -webkit-mask-image: linear-gradient(
+      to bottom,
+      black 0%,
+      black 14%,
+      black 86%,
+      transparent 100%
+    );
+  }
+
+  /* Top/bottom fade for the lyrics column. The top half of it is applied
+     only once the karaoke has progressed past the first line — before
+     that we want the first line crisp at the top of the column. */
   .lyrics-mask {
     mask-image: linear-gradient(
       to bottom,
@@ -341,6 +381,21 @@
     transform: translateZ(0);
     will-change: scale;
     backface-visibility: hidden;
+  }
+
+  /* Seeking. The 1.26s cross-fade is tuned for the slow handoff between
+     two lines during playback; when the playhead is dragged it lags the
+     text far behind the thumb. While a seek is in flight the same
+     properties hand over in 250ms on the seek curve (hard start, long
+     decelerating tail) so the highlight settles alongside the scroll
+     rather than after it. Only duration and easing are overridden, so
+     the transitioned properties stay whatever the line declares. The
+     attribute is set on the scroll container from a layout effect in
+     lyrics-view.tsx; the two class-level parts beat Tailwind's
+     single-class `duration-*` on specificity. */
+  [data-lyrics-seek="true"] .lyrics-line {
+    transition-duration: 250ms;
+    transition-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
   }
 
   /* Fine SVG noise overlaid on the heavily-blurred `BackgroundCover` art.

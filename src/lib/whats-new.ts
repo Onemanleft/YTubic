@@ -55,6 +55,38 @@ export type WhatsNewEntry = {
  */
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    version: "0.4.3",
+    date: "August 2, 2026",
+    summary: "Taskbar media controls and interface polish",
+    changes: [
+      {
+        type: "new",
+        title: "Media controls in the taskbar",
+        text: "Hover the taskbar button to shuffle, skip, play, repeat and like the current track without opening the window.",
+      },
+      {
+        type: "new",
+        title: "Right-click the player cover",
+        text: "It opens the same track menu the list rows have, plus a Download cover item that saves the best artwork it can find.",
+      },
+      {
+        type: "improved",
+        title: "Lyrics",
+        text: "The text now follows the progress slider while you drag it, and lines are no longer clipped at the edges of the column.",
+      },
+      {
+        type: "improved",
+        title: "Interface",
+        text: "Menus sit on the same frosted glass as the dialogs, and covers, cards and the playlist search field got softer corners and a cleaner outline.",
+      },
+      {
+        type: "fixed",
+        title: "Page edges shifted",
+        text: "Content sat off-center when a page had a scrollbar, and moved again when it did not.",
+      },
+    ],
+  },
+  {
     version: "0.4.2",
     date: "August 1, 2026",
     summary: "Lyrics rework and small bug fixes",
@@ -136,7 +168,7 @@ export const WHATS_NEW: WhatsNewEntry[] = [
         text: "Fixed clicks not landing on the Library button and the Sign in button sitting off-center.",
       },
     ],
-    note: "I need your help with the macOS and Linux versions. I put them together from pull requests by [ameenalasady](https://github.com/NUber-dev/YTubic/pull/1) and [yuvrajangadsingh](https://github.com/NUber-dev/YTubic/pull/33), but I have no way to run and test them myself, so they may not work at all. I've created a Discord server so we have an easier place to discuss future fixes, suggestions, and improvements: https://discord.gg/v7JGAWWWj",
+    note: "I need your help with the macOS and Linux versions. I put them together from pull requests by [ameenalasady](https://github.com/NUber-dev/YTubic/pull/1) and [yuvrajangadsingh](https://github.com/NUber-dev/YTubic/pull/33), but I have no way to run and test them myself, so they may not work at all. I've created a Discord server so we have an easier place to discuss future fixes, suggestions, and improvements: https://discord.gg/4gccUpZyYH",
   },
   {
     version: "0.3.2",

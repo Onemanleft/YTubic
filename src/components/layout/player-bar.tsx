@@ -32,13 +32,16 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Slider } from "@/components/ui/slider";
+import { ArtworkOutline } from "@/components/shared/artwork-outline";
 import { Thumbnail } from "@/components/shared/thumbnail";
 import { LikeDislikeButtons } from "@/components/shared/like-buttons";
 import { ArtistLinks } from "@/components/shared/artist-links";
 import { PlayerMoreMenu } from "@/components/layout/player-more-menu";
+import { PlayerCoverMenu } from "@/components/layout/player-cover-menu";
 import { cn } from "@/lib/utils";
 import { usePlayerCoverDrag } from "@/lib/player-drag";
 import { usePlaybackStore, currentTrack } from "@/lib/store/playback";
+import { useScrubStore } from "@/lib/store/scrub";
 import {
   useTrackSourceStore,
   type SourceKind,
@@ -434,7 +437,10 @@ export function PlayerBar({
   const setShuffle = usePlaybackStore((s) => s.setShuffle);
   const cycleRepeat = usePlaybackStore((s) => s.cycleRepeat);
 
-  const [scrub, setScrub] = useState<number | null>(null);
+  // Shared rather than local: the lyrics panel reads the live drag
+  // target so its text follows the thumb instead of waiting for release.
+  const scrub = useScrubStore((s) => s.scrub);
+  const setScrub = useScrubStore((s) => s.setScrub);
   const [queueOpen, setQueueOpen] = useState(false);
   const [compactControls, setCompactControls] = useState(false);
   const playerRef = useRef<HTMLElement>(null);
@@ -479,7 +485,7 @@ export function PlayerBar({
   // window's own layout.
   const wrapperClass =
     variant === "right"
-      ? "fixed bottom-2 right-2 top-(--titlebar-h) z-10 flex w-(--player-width) flex-col rounded-[10px] border border-sidebar-border bg-surface"
+      ? "fixed bottom-2 right-2 top-(--titlebar-h) z-10 flex w-(--player-width) flex-col rounded-[14px] border border-sidebar-border bg-surface"
       : "absolute inset-0 flex flex-col bg-surface";
 
   return (
@@ -542,27 +548,41 @@ export function PlayerBar({
         {/* The right-card cover follows the resizable card width. Only
             the floating variant stays capped at 320px so making that
             window wider cannot push the controls below the viewport. */}
-        <div
-          onPointerDown={onCoverPointerDown}
-          className={cn(
-            "mx-auto w-full touch-none select-none",
-            variant === "floating" && "max-w-[20rem]",
-            variant !== "floating" && "cursor-grab active:cursor-grabbing",
-          )}
-        >
-          {track ? (
-            <Thumbnail
-              thumbnails={track.thumbnails}
-              alt={track.title}
-              className="aspect-square w-full rounded-md border border-hairline pointer-events-none"
-              targetSize={1024}
-              highRes
-              overrideHighRes={iTunesCover}
-            />
-          ) : (
-            <div className="aspect-square w-full rounded-md border border-hairline bg-muted" />
-          )}
-        </div>
+        <PlayerCoverMenu track={track}>
+          <div
+            onPointerDown={onCoverPointerDown}
+            className={cn(
+              "mx-auto w-full touch-none select-none",
+              variant === "floating" && "max-w-[20rem]",
+              variant !== "floating" && "cursor-grab active:cursor-grabbing",
+            )}
+          >
+            {track ? (
+              // The wrapper carries the shadow so it is cast by the cover's
+              // rounded box rather than by the Thumbnail's own square edge.
+              //
+              // `isolate` is load-bearing: the outline below blends, and a
+              // blending element turns its nearest stacking-context ancestor
+              // into an isolated group, which is also a backdrop root. Without
+              // it that group is the motion.div wrapping cover AND lyrics, so
+              // the lyrics' backdrop-blur strip loses the card and the app
+              // background from its backdrop and paints as a dark band.
+              <div className="relative isolate aspect-square w-full rounded-md shadow-[0_1px_14px_rgb(0_0_0/0.12)]">
+                <Thumbnail
+                  thumbnails={track.thumbnails}
+                  alt={track.title}
+                  className="size-full rounded-md pointer-events-none"
+                  targetSize={1024}
+                  highRes
+                  overrideHighRes={iTunesCover}
+                />
+                <ArtworkOutline className="rounded-md" />
+              </div>
+            ) : (
+              <div className="aspect-square w-full rounded-md border border-hairline bg-muted" />
+            )}
+          </div>
+        </PlayerCoverMenu>
 
         {/* Title + artist with heart on the right */}
         <div className="flex items-start gap-2">

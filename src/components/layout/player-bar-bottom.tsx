@@ -9,7 +9,6 @@ import {
   Loader2Icon,
   MicVocalIcon,
 } from "lucide-react";
-import { useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import {
   Popover,
@@ -23,6 +22,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { ArtworkOutline } from "@/components/shared/artwork-outline";
 import { Thumbnail } from "@/components/shared/thumbnail";
 import { LikeDislikeButtons } from "@/components/shared/like-buttons";
 import { ArtistLinks } from "@/components/shared/artist-links";
@@ -40,9 +40,11 @@ import {
   useITunesCover,
 } from "@/components/layout/player-bar";
 import { PlayerMoreMenu } from "@/components/layout/player-more-menu";
+import { PlayerCoverMenu } from "@/components/layout/player-cover-menu";
 import { cn } from "@/lib/utils";
 import { usePlayerCoverDrag } from "@/lib/player-drag";
 import { usePlaybackStore, currentTrack } from "@/lib/store/playback";
+import { useScrubStore } from "@/lib/store/scrub";
 
 /**
  * Compact horizontal player bar pinned to the bottom of the content
@@ -76,7 +78,10 @@ export function PlayerBarBottom() {
   const setShuffle = usePlaybackStore((s) => s.setShuffle);
   const cycleRepeat = usePlaybackStore((s) => s.cycleRepeat);
 
-  const [scrub, setScrub] = useState<number | null>(null);
+  // Shared rather than local: the lyrics panel reads the live drag
+  // target so its text follows the thumb instead of waiting for release.
+  const scrub = useScrubStore((s) => s.scrub);
+  const setScrub = useScrubStore((s) => s.setScrub);
   const iTunesCover = useITunesCover(track);
   const lyricsState = useLyricsView(track);
   const { onPointerDown: onCoverPointerDown } = usePlayerCoverDrag();
@@ -108,7 +113,7 @@ export function PlayerBarBottom() {
     // pop up instantly otherwise).
     <TooltipProvider delayDuration={800} skipDelayDuration={0}>
     <aside
-      className="relative z-10 mr-2 mb-2 flex shrink-0 flex-col gap-2 rounded-[10px] border border-sidebar-border bg-surface px-4 py-3 shadow-sm"
+      className="relative z-10 mr-2 mb-2 flex shrink-0 flex-col gap-2 rounded-[14px] border border-sidebar-border bg-surface px-4 py-3 shadow-sm"
     >
       {status === "error" && error ? (
         <div className="absolute -top-9 left-3 right-3 truncate rounded-md bg-destructive/90 px-3 py-1 text-xs text-destructive-foreground shadow">
@@ -122,23 +127,28 @@ export function PlayerBarBottom() {
         {/* LEFT wing: cover + meta. `min-w-0` lets the title truncate
             instead of pushing the transport cluster off-center. */}
         <div className="flex min-w-0 flex-1 items-center gap-3">
-          <div
-            onPointerDown={onCoverPointerDown}
-            className="shrink-0 touch-none select-none cursor-grab active:cursor-grabbing"
-          >
-            {track ? (
-              <Thumbnail
-                thumbnails={track.thumbnails}
-                alt={track.title}
-                className="size-14 shrink-0 rounded-md border border-hairline pointer-events-none"
-                targetSize={256}
-                highRes
-                overrideHighRes={iTunesCover}
-              />
-            ) : (
-              <div className="size-14 shrink-0 rounded-md border border-hairline bg-muted" />
-            )}
-          </div>
+          <PlayerCoverMenu track={track}>
+            <div
+              onPointerDown={onCoverPointerDown}
+              className="shrink-0 touch-none select-none cursor-grab active:cursor-grabbing"
+            >
+              {track ? (
+                <div className="relative isolate size-14 shrink-0">
+                  <Thumbnail
+                    thumbnails={track.thumbnails}
+                    alt={track.title}
+                    className="size-full rounded-md pointer-events-none"
+                    targetSize={256}
+                    highRes
+                    overrideHighRes={iTunesCover}
+                  />
+                  <ArtworkOutline className="rounded-md" />
+                </div>
+              ) : (
+                <div className="size-14 shrink-0 rounded-md border border-hairline bg-muted" />
+              )}
+            </div>
+          </PlayerCoverMenu>
           <div className="flex min-w-0 flex-1 flex-col gap-0.5">
             <span className="truncate text-base font-semibold leading-tight">
               {track?.title ?? "Nothing playing"}
