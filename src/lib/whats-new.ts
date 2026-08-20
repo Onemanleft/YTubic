@@ -55,6 +55,34 @@ export type WhatsNewEntry = {
  */
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    version: "0.4.6",
+    date: "August 20, 2026",
+    summary: "Playback and library fixes",
+    changes: [
+      {
+        type: "fixed",
+        title: "Songs that were not cached would not play",
+        text: "Fixed. This is a temporary fix, but playback should work again.",
+      },
+      {
+        type: "fixed",
+        title: "The library showed an incomplete number of playlists",
+        text: "It capped out at 25. You should now see your full library.",
+      },
+      {
+        type: "fixed",
+        title: "Discord Rich Presence showed a song as playing while paused",
+        text: "Pausing now takes the status down, and resuming puts it back.",
+      },
+      {
+        type: "fixed",
+        title: "The progress bar was not visible in the light theme",
+        text: "Fixed for both themes.",
+      },
+    ],
+    note: "Thanks to TavoNiievez, victoria-rose and Kxsumi, who dug into the playback and library problems before this release.",
+  },
+  {
     version: "0.4.5",
     date: "August 19, 2026",
     summary: "Share links, album menus and macOS fixes",
