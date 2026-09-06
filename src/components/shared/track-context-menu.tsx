@@ -5,25 +5,25 @@ import {
   type ComponentType,
   type ReactNode,
 } from "react";
-import { useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { MoreHorizontalIcon } from "lucide-react";
 import {
-  ListPlusIcon,
-  ListEndIcon,
-  RadioIcon,
-  UserIcon,
-  DiscAlbumIcon,
-  PlayIcon,
-  HeartIcon,
-  HeartOffIcon,
-  ThumbsDownIcon,
-  ListMusicIcon,
-  ListXIcon,
-  PlusIcon,
-  MoreHorizontalIcon,
-  Loader2Icon,
-  Share2Icon,
-} from "lucide-react";
+  IconDiscFilled,
+  IconHeartFilled,
+  IconLoader2,
+  IconPlayerPlayFilled,
+  IconPlayerTrackNextFilled,
+  IconPlaylist,
+  IconPlus,
+  IconThumbDownFilled,
+} from "@tabler/icons-react";
+import {
+  IconHeartOffFilled,
+  IconPlaylistAddFilled,
+  IconPlaylistXFilled,
+  IconRadioFilled,
+  IconShare3Filled,
+} from "@/components/shared/filled-icons";
 import { toast } from "sonner";
 import { copyLink } from "@/lib/clipboard";
 import { universalShareUrl } from "@/lib/deep-link";
@@ -62,16 +62,15 @@ import { fetchRadio } from "@/lib/innertube/radio";
 import { fetchLikedSongs } from "@/lib/innertube/library";
 import {
   addToPlaylist,
-  createPlaylistWithTrack,
-  dislikeTrack,
+  createPlaylistWithTracks,
   fetchUserPlaylists,
   removeFromPlaylist,
   type UserPlaylist,
 } from "@/lib/innertube/mutations";
-import { toggleLiked } from "@/lib/like-actions";
+import { toggleDisliked, toggleLiked } from "@/lib/like-actions";
+import { useSettingsStore } from "@/lib/store/settings";
 import { usePlaybackStore } from "@/lib/store/playback";
 import type { ShelfItem } from "@/lib/innertube/types";
-import { syncLastfmLove } from "@/lib/lastfm";
 
 type TrackContext = { tracks: ShelfItem[]; index: number };
 
@@ -165,12 +164,13 @@ export function useTrackMenuController(item: ShelfItem) {
   };
   const runDislike = async () => {
     try {
-      await dislikeTrack(item.id);
-      qc.setQueryData<ShelfItem[]>(["liked-songs"], (old) =>
-        (old ?? []).filter((t) => t.id !== item.id),
-      );
-      toast.success("Marked as not interested");
-      syncLastfmLove(item, false);
+      await toggleDisliked({
+        queryClient: qc,
+        videoId: item.id,
+        wasDisliked: false,
+        wasLiked: isLiked,
+        track: item,
+      });
     } catch (e) {
       toast.error(`Failed: ${String(e)}`);
     }
@@ -247,7 +247,6 @@ export function TrackMenuItems({
   controller,
   primitives,
   removal,
-  onGoToArtist,
 }: {
   item: ShelfItem;
   context?: TrackContext;
@@ -255,16 +254,11 @@ export function TrackMenuItems({
   primitives: Primitives;
   /** Present only on an editable (user-owned) playlist page. */
   removal?: PlaylistRemovalContext;
-  /**
-   * Handler for the "Go to artist" item. Pulled out as a prop so the
-   * floating-player window can short-circuit it through a Tauri event
-   * (no router lives in that window) — main-window callers just
-   * forward to `useNavigate()`.
-   */
-  onGoToArtist?: (artistId: string) => void;
 }) {
   const store = usePlaybackStore.getState;
   const { Item, Separator, Sub, SubTrigger, SubContent } = primitives;
+  // With thumbs on every row the rating items would only repeat them.
+  const thumbs = useSettingsStore((s) => s.ratingButtons === "both");
   const {
     isLiked,
     playlists,
@@ -277,7 +271,6 @@ export function TrackMenuItems({
     setNewPlaylistOpen,
   } = controller;
 
-  const artist = item.artists?.find((a) => !!a.id);
   const albumBrowseId = undefined;
 
   return (
@@ -288,15 +281,15 @@ export function TrackMenuItems({
           else store().playNow(item);
         }}
       >
-        <PlayIcon />
+        <IconPlayerPlayFilled />
         Play
       </Item>
       <Item onSelect={() => store().enqueueNext(item)}>
-        <ListPlusIcon />
+        <IconPlayerTrackNextFilled />
         Play next
       </Item>
       <Item onSelect={() => store().enqueueEnd(item)}>
-        <ListEndIcon />
+        <IconPlaylistAddFilled />
         Add to queue
       </Item>
       <Item
@@ -310,40 +303,44 @@ export function TrackMenuItems({
           }
         }}
       >
-        <RadioIcon />
+        <IconRadioFilled />
         Start radio
       </Item>
 
       <Separator />
 
-      {isLiked ? (
-        <Item onSelect={runRemoveRating}>
-          <HeartOffIcon />
-          Remove from liked
-        </Item>
-      ) : (
-        <Item onSelect={runLike}>
-          <HeartIcon />
-          Add to liked
-        </Item>
+      {thumbs ? null : (
+        <>
+          {isLiked ? (
+            <Item variant="destructive" onSelect={runRemoveRating}>
+              <IconHeartOffFilled />
+              Remove from liked
+            </Item>
+          ) : (
+            <Item onSelect={runLike}>
+              <IconHeartFilled />
+              Add to liked
+            </Item>
+          )}
+          <Item onSelect={runDislike}>
+            <IconThumbDownFilled />
+            Not interested
+          </Item>
+        </>
       )}
-      <Item onSelect={runDislike}>
-        <ThumbsDownIcon />
-        Not interested
-      </Item>
 
       <Sub>
         <SubTrigger
           onPointerEnter={primeUserPlaylists}
           onFocus={primeUserPlaylists}
         >
-          <ListMusicIcon />
+          <IconPlaylist />
           Add to playlist
         </SubTrigger>
         <SubContent className="max-h-80 w-64 overflow-y-auto">
           {playlists.isFetching && !playlists.data ? (
             <div className="flex items-center gap-2 px-2 py-1.5 text-sm text-muted-foreground">
-              <Loader2Icon className="size-3 animate-spin" />
+              <IconLoader2 className="size-3 animate-spin" />
               Loading…
             </div>
           ) : playlists.isError ? (
@@ -363,27 +360,24 @@ export function TrackMenuItems({
           )}
           <Separator />
           <Item onSelect={() => setNewPlaylistOpen(true)}>
-            <PlusIcon />
+            <IconPlus />
             New playlist…
           </Item>
         </SubContent>
       </Sub>
 
       {removal && item.setVideoId ? (
-        <Item onSelect={() => runRemoveFromPlaylist(removal)}>
-          <ListXIcon />
+        <Item
+          variant="destructive"
+          onSelect={() => runRemoveFromPlaylist(removal)}
+        >
+          <IconPlaylistXFilled />
           Remove from playlist
         </Item>
       ) : null}
 
-      {(artist || albumBrowseId) && <Separator />}
+      {albumBrowseId && <Separator />}
 
-      {artist?.id && onGoToArtist && (
-        <Item onSelect={() => onGoToArtist(artist.id!)}>
-          <UserIcon />
-          Go to artist
-        </Item>
-      )}
       {albumBrowseId && (
         <Item
           onSelect={() => {
@@ -394,7 +388,7 @@ export function TrackMenuItems({
             void albumBrowseId;
           }}
         >
-          <DiscAlbumIcon />
+          <IconDiscFilled />
           Go to album
         </Item>
       )}
@@ -403,10 +397,8 @@ export function TrackMenuItems({
 
       {/* One link for everyone: the share page opens the track in YTubic
           when it's installed and falls back to YouTube Music when it isn't. */}
-      <Item
-        onSelect={() => void copyLink(universalShareUrl("watch", item.id))}
-      >
-        <Share2Icon />
+      <Item onSelect={() => void copyLink(universalShareUrl("watch", item.id))}>
+        <IconShare3Filled />
         Share
       </Item>
     </>
@@ -429,7 +421,6 @@ type Props = {
  */
 export function TrackContextMenu({ item, children, context, removal }: Props) {
   const controller = useTrackMenuController(item);
-  const navigate = useNavigate();
 
   if (item.kind !== "song" && item.kind !== "video") {
     return <>{children}</>;
@@ -446,9 +437,6 @@ export function TrackContextMenu({ item, children, context, removal }: Props) {
             controller={controller}
             primitives={ctxPrimitives}
             removal={removal}
-            onGoToArtist={(id) =>
-              navigate({ to: "/artist/$id", params: { id } })
-            }
           />
         </ContextMenuContent>
       </ContextMenu>
@@ -457,7 +445,7 @@ export function TrackContextMenu({ item, children, context, removal }: Props) {
         open={controller.newPlaylistOpen}
         onOpenChange={controller.setNewPlaylistOpen}
         defaultTitle={item.title}
-        videoId={item.id}
+        videoIds={[item.id]}
       />
     </>
   );
@@ -480,7 +468,6 @@ export function TrackMoreMenu({
   className?: string;
 }) {
   const controller = useTrackMenuController(item);
-  const navigate = useNavigate();
 
   if (item.kind !== "song" && item.kind !== "video") return null;
 
@@ -509,9 +496,6 @@ export function TrackMoreMenu({
             controller={controller}
             primitives={dropPrimitives}
             removal={removal}
-            onGoToArtist={(id) =>
-              navigate({ to: "/artist/$id", params: { id } })
-            }
           />
         </DropdownMenuContent>
       </DropdownMenu>
@@ -520,7 +504,7 @@ export function TrackMoreMenu({
         open={controller.newPlaylistOpen}
         onOpenChange={controller.setNewPlaylistOpen}
         defaultTitle={item.title}
-        videoId={item.id}
+        videoIds={[item.id]}
       />
     </>
   );
@@ -530,12 +514,12 @@ export function NewPlaylistDialog({
   open,
   onOpenChange,
   defaultTitle,
-  videoId,
+  videoIds,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   defaultTitle: string;
-  videoId: string;
+  videoIds: string[];
 }) {
   const qc = useQueryClient();
   const [title, setTitle] = useState(defaultTitle);
@@ -550,7 +534,7 @@ export function NewPlaylistDialog({
     if (!t || busy) return;
     setBusy(true);
     try {
-      await createPlaylistWithTrack(t, videoId);
+      await createPlaylistWithTracks(t, videoIds);
       await qc.invalidateQueries({ queryKey: ["user-playlists"] });
       await qc.invalidateQueries({ queryKey: ["library"] });
       toast.success(`Created "${t}"`);
@@ -568,8 +552,10 @@ export function NewPlaylistDialog({
         <DialogHeader>
           <DialogTitle>New playlist</DialogTitle>
           <DialogDescription>
-            The track will be added as the first entry. Playlists are
-            created as private — you can change that later on
+            {videoIds.length === 1
+              ? "The track will be added as the first entry."
+              : `The ${videoIds.length} tracks will be added in order.`}{" "}
+            Playlists are created as private — you can change that later on
             music.youtube.com.
           </DialogDescription>
         </DialogHeader>
@@ -592,7 +578,7 @@ export function NewPlaylistDialog({
             Cancel
           </Button>
           <Button onClick={submit} disabled={busy || !title.trim()}>
-            {busy && <Loader2Icon className="animate-spin" />}
+            {busy && <IconLoader2 className="animate-spin" />}
             Create
           </Button>
         </DialogFooter>

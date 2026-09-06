@@ -1,16 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useInfiniteQuery } from "@tanstack/react-query";
+import { AlertCircleIcon, RefreshCwIcon } from "lucide-react";
 import {
-  AlertCircleIcon,
-  ArrowDownAZIcon,
-  CheckIcon,
-  Loader2Icon,
-  RefreshCwIcon,
-  SearchIcon,
-  Share2Icon,
-  XIcon,
-} from "lucide-react";
+  IconCheck,
+  IconLoader2,
+  IconSearch,
+  IconSortAZ,
+  IconX,
+} from "@tabler/icons-react";
+import { IconShare3Filled } from "@/components/shared/filled-icons";
 import { toast } from "sonner";
 import {
   fetchPlaylistContinuation,
@@ -23,6 +22,8 @@ import {
 import { fetchShuffleQueue } from "@/lib/innertube/radio";
 import type { ShelfItem } from "@/lib/innertube/types";
 import { EntityHeader } from "@/components/shared/entity-header";
+import { LikedCover } from "@/components/shared/liked-cover";
+import { LikedCoverPicker } from "@/components/shared/liked-cover-picker";
 import { ExpandableText } from "@/components/shared/expandable-text";
 import { TrackList } from "@/components/shared/track-list";
 import { JumpToCurrentButton } from "@/components/shared/jump-to-current-button";
@@ -94,8 +95,8 @@ function PlaylistPageView() {
   const [searchQuery, setSearchQuery] = useState("");
   const normalizedQuery = searchQuery.trim().toLowerCase();
 
-  const pages = query.data?.pages ?? [];
-  const header = pages[0] as PlaylistFirstPage | undefined;
+  const pages = query.data?.pages;
+  const header = pages?.[0] as PlaylistFirstPage | undefined;
 
   // Suggestions live in local state (seeded from the first page) so the
   // Refresh button can swap in a new batch without touching the
@@ -129,7 +130,7 @@ function PlaylistPageView() {
       setSuggestionsBusy(false);
     }
   };
-  const tracks = useMemo(() => pages.flatMap((p) => p.tracks), [pages]);
+  const tracks = useMemo(() => pages?.flatMap((p) => p.tracks) ?? [], [pages]);
   const sortedTracks = useMemo(
     () =>
       isArtistTopSongs
@@ -156,19 +157,27 @@ function PlaylistPageView() {
   // Load more whenever the sentinel enters the viewport. `rootMargin`
   // fires ~a screen early so the next page is usually in hand by the
   // time the user actually reaches the end of the current batch.
+  // Pulled out so the effects' closures and their dependency lists name
+  // the same values (the query result object itself is new every render).
+  const {
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+    error: queryError,
+  } = query;
   const sentinelRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const el = sentinelRef.current;
     if (!el) return;
-    if (!query.hasNextPage) return;
+    if (!hasNextPage) return;
     // Stop auto-loading once a continuation has errored, otherwise the
     // still-visible sentinel re-fires fetchNextPage in an unbounded loop.
-    if (query.error) return;
+    if (queryError) return;
     const obs = new IntersectionObserver(
       (entries) => {
         for (const e of entries) {
-          if (e.isIntersecting && !query.isFetchingNextPage) {
-            query.fetchNextPage();
+          if (e.isIntersecting && !isFetchingNextPage) {
+            fetchNextPage();
           }
         }
       },
@@ -176,12 +185,7 @@ function PlaylistPageView() {
     );
     obs.observe(el);
     return () => obs.disconnect();
-  }, [
-    query.hasNextPage,
-    query.isFetchingNextPage,
-    query.fetchNextPage,
-    query.error,
-  ]);
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage, queryError]);
 
   // When the user picks any non-default sort, eagerly drain all
   // continuations so the sort applies to the whole playlist, not just
@@ -193,19 +197,19 @@ function PlaylistPageView() {
   // hammers the InnerTube edge synchronously.
   useEffect(() => {
     if (sortMode === "default" && !normalizedQuery) return;
-    if (!query.hasNextPage) return;
-    if (query.isFetchingNextPage) return;
+    if (!hasNextPage) return;
+    if (isFetchingNextPage) return;
     // Don't keep draining after an error — it would retry every 250 ms.
-    if (query.error) return;
-    const t = setTimeout(() => query.fetchNextPage(), 250);
+    if (queryError) return;
+    const t = setTimeout(() => fetchNextPage(), 250);
     return () => clearTimeout(t);
   }, [
     sortMode,
     normalizedQuery,
-    query.hasNextPage,
-    query.isFetchingNextPage,
-    query.fetchNextPage,
-    query.error,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+    queryError,
   ]);
 
   // Only take over the whole view on error when nothing is loaded yet.
@@ -304,6 +308,14 @@ function PlaylistPageView() {
             ? [{ url: img, width: 512, height: 512 }]
             : header.thumbnails
         }
+        cover={
+          isLikedSongs ? (
+            <>
+              <LikedCover className="size-full rounded-[inherit] shadow-lg" />
+              <LikedCoverPicker />
+            </>
+          ) : undefined
+        }
         round={isArtistTopSongs || openedFromArtist}
         keepSubtitleInCompact={isArtistTopSongs || openedFromArtist}
         onPlay={
@@ -316,9 +328,7 @@ function PlaylistPageView() {
                 }
               }
         }
-        onShuffle={
-          openedFromArtist ? undefined : () => void shufflePlaylist()
-        }
+        onShuffle={openedFromArtist ? undefined : () => void shufflePlaylist()}
         actions={
           isArtistTopSongs || openedFromArtist ? null : isLikedSongs ? null : (
             <>
@@ -341,43 +351,46 @@ function PlaylistPageView() {
                   )
                 }
               >
-                <Share2Icon />
+                <IconShare3Filled />
               </Button>
             </>
           )
         }
+        // Search and sort ride in the header's toolbar slot rather than
+        // in the page body, so they stay pinned under the compact header
+        // once the hero scrolls away. Top-songs has no sort mode.
         toolbar={
           isArtistTopSongs ? (
             <div className="flex items-center">
               <SearchInput value={searchQuery} onChange={setSearchQuery} />
             </div>
-          ) : undefined
+          ) : (
+            <div className="flex items-center gap-2">
+              <SearchInput value={searchQuery} onChange={setSearchQuery} />
+              <SortMenu
+                mode={sortMode}
+                onChange={(m) => setSortMode(id, m)}
+                isLikedSongs={isLikedSongs}
+              />
+            </div>
+          )
         }
       />
       {!isArtistTopSongs && header.description ? (
         <ExpandableText key={header.description} text={header.description} />
       ) : null}
 
-      <div className={isArtistTopSongs ? "contents" : "flex flex-col gap-2"}>
-        {!isArtistTopSongs ? (
-          <div className="flex items-center gap-2">
-            <SearchInput value={searchQuery} onChange={setSearchQuery} />
-            <SortMenu
-              mode={sortMode}
-              onChange={(m) => setSortMode(id, m)}
-              isLikedSongs={isLikedSongs}
-            />
-          </div>
-        ) : null}
-        {(sortMode !== "default" || normalizedQuery) && query.hasNextPage ? (
-          <span className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Loader2Icon className="size-3 animate-spin" />
-            {normalizedQuery
-              ? "Loading full playlist for search…"
-              : "Loading full playlist for sort…"}
-          </span>
-        ) : null}
-      </div>
+      {/* Rendered bare, not inside a wrapper: an always-present wrapper
+          would be an empty flex child and still claim the column's
+          `gap-8` between the header toolbar and the track list. */}
+      {(sortMode !== "default" || normalizedQuery) && query.hasNextPage ? (
+        <span className="flex items-center gap-2 text-[12px] text-t6">
+          <IconLoader2 className="size-3 animate-spin" />
+          {normalizedQuery
+            ? "Loading full playlist for search…"
+            : "Loading full playlist for sort…"}
+        </span>
+      ) : null}
 
       <JumpToCurrentButton tracks={visibleTracks} />
 
@@ -400,7 +413,7 @@ function PlaylistPageView() {
         >
           {query.isFetchingNextPage ? (
             <>
-              <Loader2Icon className="mr-2 size-4 animate-spin" />
+              <IconLoader2 className="mr-2 size-4 animate-spin" />
               Loading more…
             </>
           ) : (
@@ -412,7 +425,10 @@ function PlaylistPageView() {
       {/* Suggested additions — YTM only ships this shelf on playlists the
           user owns. Kept out of the main list (its rows are NOT playlist
           members) and hidden while a search filter is active. */}
-      {removal && suggestions && suggestions.tracks.length > 0 && !normalizedQuery ? (
+      {removal &&
+      suggestions &&
+      suggestions.tracks.length > 0 &&
+      !normalizedQuery ? (
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold tracking-tight">
@@ -529,7 +545,7 @@ function SearchInput({
 }) {
   return (
     <div className="relative flex-1">
-      <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+      <IconSearch className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-t6" />
       {/* The shared Input carries the translucent fill and hairline that
           the sort button and the Search tab's field already use — only
           the compact height and the icon padding are local. */}
@@ -538,16 +554,16 @@ function SearchInput({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder="Search in playlist"
-        className="h-8 pl-8 pr-7 text-sm"
+        className="h-8 pl-8 pr-7 text-[13.5px]"
       />
       {value ? (
         <button
           type="button"
           onClick={() => onChange("")}
           aria-label="Clear search"
-          className="absolute right-1.5 top-1/2 grid size-5 -translate-y-1/2 place-items-center rounded text-muted-foreground hover:bg-accent hover:text-foreground"
+          className="absolute right-1.5 top-1/2 grid size-5 -translate-y-1/2 cursor-pointer place-items-center rounded-md text-t6 transition-colors duration-[140ms] hover:bg-w090 hover:text-t1"
         >
-          <XIcon className="size-3.5" />
+          <IconX className="size-3.5" />
         </button>
       ) : null}
     </div>
@@ -581,7 +597,7 @@ function SortMenu({
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="outline" size="sm">
-          <ArrowDownAZIcon />
+          <IconSortAZ />
           {labelFor(mode)}
         </Button>
       </DropdownMenuTrigger>
@@ -595,7 +611,7 @@ function SortMenu({
             className="justify-between"
           >
             <span>{labelFor(m)}</span>
-            {mode === m ? <CheckIcon className="size-4" /> : null}
+            {mode === m ? <IconCheck className="size-4" stroke={2.4} /> : null}
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>

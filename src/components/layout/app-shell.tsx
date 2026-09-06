@@ -25,6 +25,7 @@ import { WhatsNewDialog } from "@/components/layout/whats-new-dialog";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAudioEngine } from "@/lib/audio-engine";
+import { FullscreenPlayer } from "@/components/layout/fullscreen-player";
 import { useCacheAutoClean } from "@/lib/cache-cleanup";
 import { usePlaybackNotifications } from "@/lib/playback-notifications";
 import { useLastfmScrobbler } from "@/lib/lastfm-scrobbler";
@@ -190,16 +191,22 @@ export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   useEffect(() => {
     let cancelled = false;
-    let dispose: (() => void) | undefined;
-    void listen<{ id: string }>("nav:artist", (e) => {
-      void navigate({ to: "/artist/$id", params: { id: e.payload.id } });
-    }).then((un) => {
-      if (cancelled) un();
-      else dispose = un;
-    });
+    const disposers: (() => void)[] = [];
+    const bind = <T,>(event: string, run: (payload: T) => void) => {
+      void listen<T>(event, (e) => run(e.payload)).then((un) => {
+        if (cancelled) un();
+        else disposers.push(un);
+      });
+    };
+    bind<{ id: string }>("nav:artist", ({ id }) =>
+      navigate({ to: "/artist/$id", params: { id } }),
+    );
+    bind<{ id: string }>("nav:album", ({ id }) =>
+      navigate({ to: "/album/$id", params: { id } }),
+    );
     return () => {
       cancelled = true;
-      dispose?.();
+      for (const un of disposers) un();
     };
   }, [navigate]);
 
@@ -209,7 +216,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         style={
           {
             "--sidebar-width": `${sidebarWidth}px`,
-            "--sidebar-width-icon": "4rem",
+            "--sidebar-width-icon": "3.5rem",
             "--player-width": `${playerWidth}px`,
           } as React.CSSProperties
         }
@@ -247,6 +254,16 @@ export function AppShell({ children }: { children: ReactNode }) {
                   across the padding box, under the player card. */}
               <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
                 <EntityPageHeader />
+                {/* Slot for a route's own pinned header (Home portals
+                    its title row here). Outside the scroller for the
+                    same reason the entity header is: the route masks
+                    the scroller's top edge so content dissolves under
+                    the header, and a header inside the scroller would
+                    dissolve with it. */}
+                <div
+                  data-route-header-slot
+                  className="pointer-events-none absolute inset-x-0 top-0 z-20 [&>*]:pointer-events-auto"
+                />
                 {/* Plain scroller — NOT Radix ScrollArea. Radix wraps the
                     content in `display: table; min-width: 100%` which grows
                     to intrinsic width and defeats any nested `overflow-x`
@@ -260,6 +277,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             {mode === "floating" && hasTrack && <FloatingPlayerSync />}
           </div>
           <DragSnapOverlay />
+          <FullscreenPlayer />
           <WindowResizeHandles disabled={IS_MAC} />
           <SettingsDialog />
           <PremiumGateDialog />
@@ -355,8 +373,19 @@ function BackgroundCover() {
     }
   }, [url, active, slotA, slotB]);
 
+  // The wash is tuned per theme, as in the prototype: on a dark ground
+  // the art is saturated and left dark, on a light one it is brightened
+  // and desaturated, or it settles as a grey haze over the white page.
   const baseClass =
-    "pointer-events-none absolute inset-0 h-full w-full scale-125 object-cover blur-3xl saturate-150 transition-opacity duration-700 ease-out";
+    "pointer-events-none absolute inset-0 h-full w-full scale-125 object-cover blur-3xl " +
+    "saturate-[0.9] brightness-[1.4] dark:saturate-150 dark:brightness-100 " +
+    "transition-opacity duration-700 ease-out";
+
+  // Held on the element rather than inline, so the visible slot can carry
+  // a different value per theme. On a light page the wash reads much
+  // louder at the same alpha: it tints white, where on a dark one it only
+  // lifts an already dark ground.
+  const shown = "opacity-[0.15] dark:opacity-30";
 
   return (
     <>
@@ -365,8 +394,7 @@ function BackgroundCover() {
           src={slotA}
           alt=""
           aria-hidden
-          className={baseClass}
-          style={{ opacity: active === "A" ? 0.3 : 0 }}
+          className={`${baseClass} ${active === "A" ? shown : "opacity-0"}`}
         />
       )}
       {slotB && (
@@ -374,8 +402,7 @@ function BackgroundCover() {
           src={slotB}
           alt=""
           aria-hidden
-          className={baseClass}
-          style={{ opacity: active === "B" ? 0.3 : 0 }}
+          className={`${baseClass} ${active === "B" ? shown : "opacity-0"}`}
         />
       )}
       {(slotA || slotB) && (

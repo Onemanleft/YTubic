@@ -1,3 +1,6 @@
+// Transport glyphs (play / pause / prev / next) stay on Lucide — they
+// read better filled at this size than the Tabler equivalents. The
+// footer row is Tabler, per the design.
 import {
   PlayIcon,
   PauseIcon,
@@ -6,14 +9,19 @@ import {
   ShuffleIcon,
   RepeatIcon,
   Repeat1Icon,
-  VolumeIcon,
-  Volume1Icon,
-  Volume2Icon,
-  VolumeXIcon,
   Loader2Icon,
-  MusicIcon,
-  VideoIcon,
 } from "lucide-react";
+import {
+  IconArrowsMaximize,
+  IconLoader2,
+  IconVideoFilled,
+} from "@tabler/icons-react";
+import {
+  IconMusicFilled,
+  IconVolumeFilled,
+  IconVolume2Filled,
+  IconVolume3Filled,
+} from "@/components/shared/filled-icons";
 import { QueueBody, QueueToggleButton } from "@/components/layout/queue-panel";
 import {
   LyricsBody,
@@ -36,10 +44,15 @@ import { ArtworkOutline } from "@/components/shared/artwork-outline";
 import { Thumbnail } from "@/components/shared/thumbnail";
 import { LikeDislikeButtons } from "@/components/shared/like-buttons";
 import { ArtistLinks } from "@/components/shared/artist-links";
+import { EntityLink } from "@/components/shared/entity-link";
 import { PlayerMoreMenu } from "@/components/layout/player-more-menu";
 import { PlayerCoverMenu } from "@/components/layout/player-cover-menu";
+import {
+  playerIconButton,
+} from "@/components/layout/player-chrome";
 import { cn } from "@/lib/utils";
 import { usePlayerCoverDrag } from "@/lib/player-drag";
+import { openFullscreen } from "@/lib/store/fullscreen";
 import { usePlaybackStore, currentTrack } from "@/lib/store/playback";
 import { useScrubStore } from "@/lib/store/scrub";
 import {
@@ -146,8 +159,28 @@ export function SourceToggle({ track }: { track: QueueTrack }) {
     }
   };
 
+  // Design-system toggle: one moving thumb under two 28px icon slots
+  // rather than a fill on the selected half. The thumb is absolutely
+  // positioned and slides by exactly one slot + the 2px gap, so the
+  // travel stays correct however the icons are sized. Its radius is the
+  // track's minus the 2px padding, so the corners nest instead of
+  // fighting.
+  const seg =
+    "relative z-[1] grid size-7 place-items-center rounded-md " +
+    "transition-colors duration-[180ms] disabled:cursor-default " +
+    "[&_svg]:size-4";
+
   return (
-    <div className="flex items-center rounded-md border bg-muted/40 p-0.5">
+    <div className="relative ml-auto flex gap-0.5 rounded-[10px] border border-w070 bg-w050 p-0.5">
+      <span
+        aria-hidden
+        className={cn(
+          "pointer-events-none absolute left-0.5 top-0.5 size-7 rounded-md",
+          "bg-w140 shadow-[0_1px_2px_var(--k350),inset_0_1px_0_var(--w080)]",
+          "transition-transform duration-[280ms] [transition-timing-function:cubic-bezier(.32,.72,0,1)]",
+          selected === "video" ? "translate-x-[30px]" : "translate-x-0",
+        )}
+      />
       <Tooltip>
         <TooltipTrigger asChild>
           <button
@@ -157,16 +190,14 @@ export function SourceToggle({ track }: { track: QueueTrack }) {
             onClick={() => switchTo("song")}
             disabled={busy !== null}
             className={cn(
-              "flex size-7 items-center justify-center rounded-sm transition-colors",
-              selected === "song"
-                ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground hover:bg-white/10 hover:text-foreground",
+              seg,
+              selected === "song" ? "text-t1" : "text-t5 hover:text-t3",
             )}
           >
             {busy === "song" ? (
-              <Loader2Icon className="size-4 animate-spin" />
+              <IconLoader2 className="animate-spin" />
             ) : (
-              <MusicIcon className="size-4" />
+              <IconMusicFilled />
             )}
           </button>
         </TooltipTrigger>
@@ -181,16 +212,14 @@ export function SourceToggle({ track }: { track: QueueTrack }) {
             onClick={() => switchTo("video")}
             disabled={busy !== null}
             className={cn(
-              "flex size-7 items-center justify-center rounded-sm transition-colors",
-              selected === "video"
-                ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground hover:bg-white/10 hover:text-foreground",
+              seg,
+              selected === "video" ? "text-t1" : "text-t5 hover:text-t3",
             )}
           >
             {busy === "video" ? (
-              <Loader2Icon className="size-4 animate-spin" />
+              <IconLoader2 className="animate-spin" />
             ) : (
-              <VideoIcon className="size-4" />
+              <IconVideoFilled />
             )}
           </button>
         </TooltipTrigger>
@@ -277,9 +306,12 @@ export function ProgressSlider({
 export function VolumeControl({
   direction = "horizontal",
   compact = false,
+  className,
 }: {
   direction?: "horizontal" | "vertical";
   compact?: boolean;
+  /** Extra classes for the speaker button (the full-screen chip). */
+  className?: string;
 }) {
   const { volume, muted } = usePlaybackStore(
     useShallow((s) => ({ volume: s.volume, muted: s.muted })),
@@ -288,14 +320,14 @@ export function VolumeControl({
   const toggleMute = usePlaybackStore((s) => s.toggleMute);
   const [open, setOpen] = useState(false);
 
+  // Tabler ships three speaker states to Lucide's four, so the old
+  // "audible but no waves" step folds into the single-wave icon.
   const Icon =
     muted || volume === 0
-      ? VolumeXIcon
-      : volume <= 0.15
-        ? VolumeIcon
-        : volume < 0.6
-          ? Volume1Icon
-          : Volume2Icon;
+      ? IconVolume3Filled
+      : volume < 0.6
+        ? IconVolume2Filled
+        : IconVolumeFilled;
   const pct = muted ? 0 : Math.round(volume * 100);
 
   // Horizontal: slider sits to the right of the speaker icon (right
@@ -337,10 +369,11 @@ export function VolumeControl({
         size="icon"
         aria-label={muted ? "Unmute" : "Mute"}
         onClick={toggleMute}
+        className={cn(playerIconButton, className)}
       >
         <AnimatePresence mode="popLayout" initial={false}>
           <motion.span
-            key={Icon.displayName ?? Icon.name}
+            key={Icon.name}
             initial={{ opacity: 0, scale: 0.7 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.7 }}
@@ -563,7 +596,7 @@ export function PlayerBar({
               // it that group is the motion.div wrapping cover AND lyrics, so
               // the lyrics' backdrop-blur strip loses the card and the app
               // background from its backdrop and paints as a dark band.
-              <div className="relative isolate aspect-square w-full rounded-md shadow-[0_1px_14px_rgb(0_0_0/0.12)]">
+              <div className="group/cover relative isolate aspect-square w-full rounded-md shadow-[0_1px_14px_rgb(0_0_0/0.12)]">
                 <Thumbnail
                   thumbnails={track.thumbnails}
                   alt={track.title}
@@ -573,6 +606,24 @@ export function PlayerBar({
                   overrideHighRes={iTunesCover}
                 />
                 <ArtworkOutline className="rounded-md" />
+                {/* Hover pad with the Full screen chip, per the design.
+                    Only the chip is clickable, and it stops the pointer
+                    from reaching the cover's drag handle: the handle
+                    captures the pointer, which would swallow the click.
+                    The floating window has its own surface for this. */}
+                {variant !== "floating" ? (
+                  <div className="pointer-events-none absolute inset-0 grid place-items-center rounded-md bg-(--g6a) opacity-0 transition-opacity duration-[160ms] group-hover/cover:opacity-100 has-[button:focus-visible]:opacity-100">
+                    <button
+                      type="button"
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onClick={openFullscreen}
+                      className="pointer-events-auto flex cursor-pointer items-center gap-2 rounded-[10px] bg-w160 px-3.5 py-[9px] text-[13px] font-semibold text-white backdrop-blur-[8px] transition-colors hover:bg-w200"
+                    >
+                      <IconArrowsMaximize className="size-[17px]" stroke={1.9} />
+                      Full screen
+                    </button>
+                  </div>
+                ) : null}
               </div>
             ) : (
               <div className="aspect-square w-full rounded-md border border-hairline bg-muted" />
@@ -580,18 +631,40 @@ export function PlayerBar({
           </div>
         </PlayerCoverMenu>
 
-        {/* Title + artist with heart on the right */}
-        <div className="flex items-start gap-2">
+        {/* Title + artist/album with heart on the right. The heart
+            centres against the whole two-line block, per the design. */}
+        <div className="flex items-center gap-2">
           <div className="flex min-w-0 flex-1 flex-col">
             <span className="truncate text-base font-medium">
               {track?.title ?? "Nothing playing"}
             </span>
             {track ? (
-              <ArtistLinks
-                artists={track.artists}
-                fallback={track.subtitle ?? ""}
-                className="truncate text-sm text-muted-foreground"
-              />
+              <span className="truncate text-sm text-muted-foreground">
+                <ArtistLinks
+                  artists={track.artists}
+                  fallback={track.subtitle ?? ""}
+                />
+                {/* The separator only earns its place between two real
+                    halves — a track with no artists must not open with
+                    a stray dot. The album links through only when the
+                    row it came from carried a browse id. */}
+                {track.album ? (
+                  <>
+                    {track.artists?.length || track.subtitle ? " · " : null}
+                    {track.albumId ? (
+                      <EntityLink
+                        to="/album/$id"
+                        id={track.albumId}
+                        event="nav:album"
+                      >
+                        {track.album}
+                      </EntityLink>
+                    ) : (
+                      track.album
+                    )}
+                  </>
+                ) : null}
+              </span>
             ) : (
               <span className="truncate text-sm text-muted-foreground">
                 Pick a track to start
@@ -599,7 +672,11 @@ export function PlayerBar({
             )}
           </div>
           {track ? (
-            <LikeDislikeButtons videoId={track.videoId} track={track} className="-mt-1" />
+            <LikeDislikeButtons
+              videoId={track.videoId}
+              track={track}
+              className="shrink-0"
+            />
           ) : null}
         </div>
 

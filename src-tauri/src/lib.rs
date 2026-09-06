@@ -33,6 +33,10 @@ mod power;
 // preview). Windows-only shell surface; see src/thumbbar.rs.
 #[cfg(windows)]
 mod thumbbar;
+// Grants the microphone to our own pages without WebView2's dialog; the
+// Playback tab needs it to name and pick output devices. See the module.
+#[cfg(windows)]
+mod webview_permissions;
 mod ytdlp;
 
 /// Write `bytes` to `path` atomically: a sibling temp file, flushed to
@@ -428,7 +432,7 @@ const YT_WEBVIEW_ARGS: &str = "--disable-features=HardwareMediaKeyHandling,Media
 /// mismatch makes `open_player_window` fail and the floating player never
 /// appears. (The first three disabled features are wry's own defaults,
 /// which the conf.json value extends.)
-const APP_WEBVIEW_ARGS: &str = "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection,HardwareMediaKeyHandling,MediaSessionService";
+const APP_WEBVIEW_ARGS: &str = "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection,HardwareMediaKeyHandling,MediaSessionService --autoplay-policy=no-user-gesture-required";
 
 /// Legacy single-account path — kept only for migration. New code
 /// should resolve cookies via `active_cookies_path`.
@@ -3882,6 +3886,10 @@ pub fn run() {
                         settings.set_enable_smooth_scrolling(true);
                     }
                 });
+            }
+            #[cfg(windows)]
+            if let Some(w) = app.get_webview_window("main") {
+                webview_permissions::install(&w);
             }
             // Debug builds swap the taskbar/window icon to the orange
             // dev variant (see runtime_icon) so a dev instance is

@@ -1,4 +1,4 @@
-export type WhatsNewChangeType = "new" | "improved" | "fixed" | "security";
+export type WhatsNewChangeType = "new" | "improved" | "fixed";
 
 export type WhatsNewChange = {
   type: WhatsNewChangeType;
@@ -30,8 +30,9 @@ export type WhatsNewEntry = {
    */
   imageAlign?: "top";
   /**
-   * Typed change list. The dialog groups these into "New & Improved",
-   * "Fixed", and "Security" sections with counts, in that order.
+   * Typed change list, rendered in order as one flat list. The type
+   * only picks the bullet colour: `new` and `improved` get the accent
+   * dot, `fixed` a muted one.
    */
   changes: WhatsNewChange[];
   /**
@@ -54,6 +55,64 @@ export type WhatsNewEntry = {
  * copy free of em/en dashes.
  */
 export const WHATS_NEW: WhatsNewEntry[] = [
+  {
+    version: "0.5.0",
+    date: "September 6, 2026",
+    summary: "New UI, full-screen player and playback settings",
+    image: "/whats-new/0.5.0.jpg",
+    changes: [
+      {
+        type: "new",
+        title: "New UI",
+        text: "Every screen was redrawn on one design system, from the player card and sidebar to menus, dialogs, settings and the light theme.",
+      },
+      {
+        type: "new",
+        title: "Full-screen player",
+        text: "A big-screen view of what is playing, with three layouts to pick from.",
+      },
+      {
+        type: "new",
+        title: "Playback settings",
+        text: "Crossfade, volume normalization, an equalizer with presets, output device and more.",
+      },
+      {
+        type: "new",
+        title: "Select several tracks at once",
+        text: "Shift-click rows in any list, then save them to a playlist, play them next or add them to the queue.",
+      },
+      {
+        type: "improved",
+        title: "Updated Home page",
+        text: "Refresh the feed, reorder or hide its sections, and play any album or playlist straight from its card.",
+      },
+      {
+        type: "new",
+        title: "Interface font",
+        text: "Choose the font the whole app uses in Appearance.",
+      },
+      {
+        type: "new",
+        title: "Like and dislike buttons",
+        text: "Replace the heart with a like and dislike pair, like on YouTube Music.",
+      },
+      {
+        type: "new",
+        title: "Liked songs cover",
+        text: "Pick a cover for the Liked songs playlist.",
+      },
+      {
+        type: "new",
+        title: "Windows on ARM",
+        text: "Added an arm64 build.",
+      },
+      {
+        type: "fixed",
+        title: "Discord",
+        text: "Rich Presence now shows the song title instead of the app name.",
+      },
+    ],
+  },
   {
     version: "0.4.7",
     date: "August 22, 2026",

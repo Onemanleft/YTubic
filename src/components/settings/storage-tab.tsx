@@ -1,24 +1,32 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentType,
+} from "react";
 import { createPortal } from "react-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
 import { relaunch } from "@tauri-apps/plugin-process";
+// Filled Tabler glyphs for anything sitting on a settings tile or a
+// stat card; plain ones for the controls (sorting, chevrons, spinners),
+// which read as affordances rather than marks.
 import {
-  ArrowDownWideNarrowIcon,
-  CalendarClockIcon,
-  ChevronDownIcon,
-  DatabaseIcon,
-  FolderIcon,
-  FolderOpenIcon,
-  HardDriveIcon,
-  ImageIcon,
-  LibraryIcon,
-  Loader2Icon,
-  LockIcon,
-  MusicIcon,
-  Trash2Icon,
-  type LucideIcon,
-} from "lucide-react";
+  IconChevronDown,
+  IconClockFilled,
+  IconDatabaseFilled,
+  IconDiscFilled,
+  IconChartPieFilled,
+  IconFolderFilled,
+  IconFolderOpen,
+  IconLibraryFilled,
+  IconLoader2,
+  IconLockFilled,
+  IconPhotoFilled,
+  IconSortDescending,
+  IconTrashFilled,
+} from "@tabler/icons-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -51,8 +59,10 @@ export function StorageTab() {
 
   return (
     <>
-      {/* Stat cards sit above the divided settings list — its own
-          bottom padding is the only separation, no divider. */}
+      {/* Stat cards sit above the divided settings list — their own
+          padding is the only separation, no divider. The top half of it
+          matches the first row's on every other tab, so all four tabs
+          start the same distance under the header. */}
       <StorageStats />
       <TabPane>
         <CacheFolderGroup />
@@ -79,17 +89,17 @@ function StatCard({
   label,
   value,
 }: {
-  icon: LucideIcon;
+  icon: ComponentType<{ className?: string }>;
   label: string;
   value: string;
 }) {
   return (
-    <div className="flex flex-col gap-1 rounded-[10px] border bg-background p-4 shadow-xs dark:border-input dark:bg-input/30">
-      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-        <Icon className="size-3.5 text-foreground" />
+    <div className="flex flex-col gap-1 rounded-xl border border-w075 bg-w028 p-4">
+      <div className="flex items-center gap-1.5 text-xs text-t6">
+        <Icon className="size-3.5 text-t2" />
         {label}
       </div>
-      <span className="text-2xl font-bold tracking-tight tabular-nums leading-none">
+      <span className="text-2xl font-bold leading-none tracking-tight tabular-nums text-t1">
         {value}
       </span>
     </div>
@@ -117,20 +127,20 @@ function StorageStats() {
   return (
     // pb gives the stat cards breathing room above the divider the
     // TabPane draws between it and the first settings row.
-    <div className="grid grid-cols-3 gap-3 pb-4">
+    <div className="grid grid-cols-3 gap-3 py-4">
       <StatCard
-        icon={MusicIcon}
-        label="Cached tracks"
+        icon={IconDiscFilled}
+        label="Cached Tracks"
         value={cache.data ? String(cache.data.length) : "…"}
       />
       <StatCard
-        icon={HardDriveIcon}
-        label="Used by tracks"
+        icon={IconChartPieFilled}
+        label="Used by Tracks"
         value={cache.data ? formatBytes(trackBytes) : "…"}
       />
       <StatCard
-        icon={ImageIcon}
-        label="Used by covers"
+        icon={IconPhotoFilled}
+        label="Used by Covers"
         value={covers.data ? formatBytes(covers.data.bytes) : "…"}
       />
     </div>
@@ -163,7 +173,7 @@ function CacheFolderGroup() {
       toast.success("Cache folder updated", {
         description:
           "Existing files stay where they are; new downloads use the new folder after a restart.",
-        action: { label: "Restart now", onClick: () => void relaunch() },
+        action: { label: "Restart Now", onClick: () => void relaunch() },
       });
     } catch (e) {
       toast.error(String(e));
@@ -181,8 +191,8 @@ function CacheFolderGroup() {
   return (
     <Group>
       <SettingRow
-        icon={FolderIcon}
-        title="Cache folder"
+        icon={IconFolderFilled}
+        title="Cache Folder"
         description={
           info.data ? (
             <span className="break-all">
@@ -210,7 +220,7 @@ function CacheFolderGroup() {
               </Button>
             ) : null}
             <Button variant="outline" size="sm" onClick={() => void change()}>
-              <FolderOpenIcon />
+              <IconFolderOpen />
               Change
             </Button>
           </div>
@@ -237,9 +247,9 @@ function PremiumGatedCacheGroup({ loggedIn }: { loggedIn: boolean }) {
   return (
     <Group>
       <SettingRow
-        icon={LockIcon}
+        icon={IconLockFilled}
         iconClassName="text-amber-600 dark:text-amber-400"
-        title="Track caching is Premium-only"
+        title="Track Caching Is Premium-Only"
         description={
           loggedIn
             ? "No active Premium subscription found on this account. Detection reads YT Music's account menu; if it got you wrong, re-check after a moment."
@@ -312,8 +322,8 @@ function AutoCleanRow({ loggedIn }: { loggedIn: boolean }) {
 
   return (
     <SettingRow
-      icon={CalendarClockIcon}
-      title="Auto-clean tracks not in library"
+      icon={IconClockFilled}
+      title="Auto-Clean Tracks Not in Library"
       description={description}
       control={
         <SegmentedControl
@@ -499,11 +509,11 @@ function CacheGroup({ loggedIn }: { loggedIn: boolean }) {
   const headerToolbar = (
     <div className="flex flex-col gap-4 py-4">
       <div className="flex items-center gap-3">
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted">
-          <DatabaseIcon className="size-[18px] text-muted-foreground" />
+        <div className="grid size-8 shrink-0 place-items-center rounded-[9px] border border-w070 bg-w050">
+          <IconDatabaseFilled className="size-4 text-t5" />
         </div>
         <div className="min-w-0 flex-1">
-          <span className="text-[15px] font-medium leading-none">
+          <span className="text-sm font-semibold leading-none text-t2">
             Cached tracks
           </span>
         </div>
@@ -527,9 +537,9 @@ function CacheGroup({ loggedIn }: { loggedIn: boolean }) {
             disabled={bulkBusy || !library.data || otherCount === 0}
           >
             {bulkBusy ? (
-              <Loader2Icon className="animate-spin" />
+              <IconLoader2 className="animate-spin" />
             ) : (
-              <Trash2Icon />
+              <IconTrashFilled />
             )}
             Clear Others
           </Button>
@@ -552,7 +562,7 @@ function CacheGroup({ loggedIn }: { loggedIn: boolean }) {
                   label: libraryLoading ? (
                     <span className="inline-flex items-center gap-1.5">
                       In library
-                      <Loader2Icon className="size-3 animate-spin" />
+                      <IconLoader2 className="size-3 animate-spin" />
                     </span>
                   ) : (
                     `In library (${inLibraryCount})`
@@ -563,7 +573,7 @@ function CacheGroup({ loggedIn }: { loggedIn: boolean }) {
                   label: libraryLoading ? (
                     <span className="inline-flex items-center gap-1.5">
                       Other
-                      <Loader2Icon className="size-3 animate-spin" />
+                      <IconLoader2 className="size-3 animate-spin" />
                     </span>
                   ) : (
                     `Other (${otherCount})`
@@ -578,9 +588,9 @@ function CacheGroup({ loggedIn }: { loggedIn: boolean }) {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm">
-              <ArrowDownWideNarrowIcon />
+              <IconSortDescending />
               {SORT_LABELS[sort]}
-              <ChevronDownIcon className="opacity-50" />
+              <IconChevronDown className="opacity-50" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-36">
@@ -614,13 +624,13 @@ function CacheGroup({ loggedIn }: { loggedIn: boolean }) {
       {pinned && slotEl ? createPortal(headerToolbar, slotEl) : null}
       <div ref={wrapRef}>
         {pinned ? null : headerToolbar}
-        <div className="flex flex-col divide-y divide-border/50">
+        <div className="flex flex-col divide-y divide-w060">
           {cache.isLoading ? (
-            <div className="py-8 text-center text-sm text-muted-foreground">
+            <div className="py-8 text-center text-sm text-t6">
               Loading…
             </div>
           ) : filtered.length === 0 ? (
-            <div className="py-8 text-center text-sm text-muted-foreground">
+            <div className="py-8 text-center text-sm text-t6">
               {cache.isError
                 ? "Couldn't read the cache folder."
                 : cache.data?.length === 0
@@ -696,7 +706,7 @@ function CacheRow({
           src={thumb}
           alt=""
           loading="lazy"
-          className="size-full rounded-sm bg-muted object-cover"
+          className="size-full rounded-sm bg-w050 object-cover"
           referrerPolicy="no-referrer"
           onLoad={(e) => {
             const img = e.currentTarget;
@@ -720,25 +730,25 @@ function CacheRow({
               {inLibrary && (
                 <Badge
                   variant="secondary"
-                  title="In library"
-                  aria-label="In library"
+                  title="In Library"
+                  aria-label="In Library"
                   // Icon-only chip; px-1 tightens the now text-less pill so
                   // it isn't mostly padding. Meaning is carried by the
                   // title/aria-label instead of a visible caption.
                   className="bg-emerald-500/15 px-1 text-emerald-600 dark:text-emerald-400"
                 >
-                  <LibraryIcon className="size-3" />
+                  <IconLibraryFilled className="size-3" />
                 </Badge>
               )}
             </>
           )}
         </div>
-        <div className="truncate text-xs text-muted-foreground">
+        <div className="truncate text-xs text-t7">
           {subtitle ? `${subtitle} · ` : ""}
           {formatRelative(entry.modifiedSecs)}
         </div>
       </div>
-      <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+      <span className="shrink-0 text-xs tabular-nums text-t7">
         {formatBytes(entry.size)}
       </span>
       <Button
@@ -747,12 +757,12 @@ function CacheRow({
         onClick={onDelete}
         disabled={isDeleting}
         aria-label="Delete cached track"
-        className="text-muted-foreground hover:text-destructive"
+        className="text-t6 hover:text-acc2"
       >
         {isDeleting ? (
-          <Loader2Icon className="size-4 animate-spin" />
+          <IconLoader2 className="size-4 animate-spin" />
         ) : (
-          <Trash2Icon className="size-4" />
+          <IconTrashFilled className="size-4" />
         )}
       </Button>
     </div>
@@ -799,8 +809,8 @@ function CoverCacheGroup() {
   return (
     <Group>
       <SettingRow
-        icon={ImageIcon}
-        title="Cover art cache"
+        icon={IconPhotoFilled}
+        title="Cover Art Cache"
         control={
           // Counts live in the stat cards up top — the row keeps just
           // the action.
@@ -810,7 +820,7 @@ function CoverCacheGroup() {
             onClick={clear}
             disabled={busy || !stats.data?.count}
           >
-            {busy ? <Loader2Icon className="animate-spin" /> : <Trash2Icon />}
+            {busy ? <IconLoader2 className="animate-spin" /> : <IconTrashFilled />}
             Clear
           </Button>
         }
