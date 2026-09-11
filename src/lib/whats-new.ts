@@ -56,6 +56,23 @@ export type WhatsNewEntry = {
  */
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    version: "0.5.1",
+    date: "September 11, 2026",
+    summary: "Login fixes",
+    changes: [
+      {
+        type: "fixed",
+        title: "Session drop",
+        text: "Fixed the app opening signed out after being closed for a while.",
+      },
+      {
+        type: "fixed",
+        title: "Empty library",
+        text: "Fixed the library and likes loading empty when the session came back.",
+      },
+    ],
+  },
+  {
     version: "0.5.0",
     date: "September 6, 2026",
     summary: "New UI, full-screen player and playback settings",
